@@ -1,122 +1,143 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import React from 'react';
+import { HashRouter as Router, Routes, Route, NavLink } from 'react-router-dom';
 
-function App() {
-  const [count, setCount] = useState(0)
+// Import Pages
+import Dashboard from './pages/Dashboard';
+import Customers from './pages/Customers';
+import AudienceBuilder from './pages/AudienceBuilder';
+import CampaignStudio from './pages/CampaignStudio';
+import Analytics from './pages/Analytics';
 
+export default function App() {
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+    <Router>
+      <div className="flex min-h-screen bg-slate-900 font-sans antialiased text-slate-200">
+        
+        {/* Sidebar Container */}
+        <aside className="w-64 bg-slate-950 border-r border-slate-800 flex flex-col justify-between hidden md:flex shrink-0">
+          <div className="p-6">
+            {/* Logo */}
+            <div className="flex items-center space-x-2.5">
+              <div className="w-8 h-8 rounded-lg bg-emerald-500 flex items-center justify-center font-bold text-white shadow-md shadow-emerald-950/50">
+                SR
+              </div>
+              <div>
+                <p className="font-bold text-sm tracking-tight text-white leading-none">SmartReach</p>
+                <span className="text-[10px] font-semibold text-emerald-400">AI CRM Platform</span>
+              </div>
+            </div>
 
-      <div className="ticks"></div>
+            {/* Navlinks */}
+            <nav className="mt-8 space-y-1.5">
+              <NavLink 
+                to="/" 
+                className={({ isActive }) => `flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-semibold transition ${
+                  isActive 
+                    ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/10' 
+                    : 'text-slate-400 hover:text-slate-250 border border-transparent hover:bg-slate-900/40'
+                }`}
+              >
+                <span>Dashboard</span>
+              </NavLink>
+              
+              <NavLink 
+                to="/customers" 
+                className={({ isActive }) => `flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-semibold transition ${
+                  isActive 
+                    ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/10' 
+                    : 'text-slate-400 hover:text-slate-250 border border-transparent hover:bg-slate-900/40'
+                }`}
+              >
+                <span>Customers</span>
+              </NavLink>
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+              <NavLink 
+                to="/audience-builder" 
+                className={({ isActive }) => `flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-semibold transition ${
+                  isActive 
+                    ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/10' 
+                    : 'text-slate-400 hover:text-slate-250 border border-transparent hover:bg-slate-900/40'
+                }`}
+              >
+                <span>Audience Builder</span>
+              </NavLink>
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+              <NavLink 
+                to="/campaign-studio" 
+                className={({ isActive }) => `flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-semibold transition ${
+                  isActive 
+                    ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/10' 
+                    : 'text-slate-400 hover:text-slate-250 border border-transparent hover:bg-slate-900/40'
+                }`}
+              >
+                <span>Campaign Studio</span>
+              </NavLink>
+
+              <NavLink 
+                to="/analytics" 
+                className={({ isActive }) => `flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-semibold transition ${
+                  isActive 
+                    ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/10' 
+                    : 'text-slate-400 hover:text-slate-250 border border-transparent hover:bg-slate-900/40'
+                }`}
+              >
+                <span>Analytics</span>
+              </NavLink>
+            </nav>
+          </div>
+
+          {/* Footer Info inside Sidebar */}
+          <div className="p-6 border-t border-slate-850">
+            <div className="flex items-center space-x-2 text-xs text-slate-500">
+              <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping"></span>
+              <p>Simulated Node API OK</p>
+            </div>
+            <p className="text-[10px] text-slate-600 mt-1">&copy; SmartReach CRM 2026</p>
+          </div>
+        </aside>
+
+        {/* Main Content Area */}
+        <div className="flex-1 flex flex-col min-w-0">
+          
+          {/* Top Navbar */}
+          <header className="h-16 border-b border-slate-800 bg-slate-950/70 backdrop-blur-md flex items-center justify-between px-6 shrink-0 z-40">
+            {/* Mobile Title */}
+            <div className="flex items-center space-x-2 md:hidden">
+              <div className="w-7 h-7 rounded bg-emerald-500 flex items-center justify-center font-bold text-white text-sm">
+                SR
+              </div>
+              <p className="font-bold text-sm tracking-tight text-white leading-none">SmartReach</p>
+            </div>
+
+            {/* Spacer in desktop */}
+            <div className="hidden md:block"></div>
+
+            {/* Topbar Info tags */}
+            <div className="flex items-center space-x-4">
+              <div className="hidden sm:flex items-center space-x-2 text-xs bg-slate-900 border border-slate-850 rounded px-2.5 py-1">
+                <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                <span className="text-slate-400 font-semibold">Atlas MongoDB Connected</span>
+              </div>
+              <div className="hidden sm:flex items-center space-x-2 text-xs bg-slate-900 border border-slate-850 rounded px-2.5 py-1">
+                <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                <span className="text-slate-400 font-semibold">Gemini LLM Ready</span>
+              </div>
+            </div>
+          </header>
+
+          {/* Page Routing Outlets */}
+          <main className="flex-1 overflow-y-auto p-6 md:p-8 max-w-7xl w-full mx-auto">
+            <Routes>
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/customers" element={<Customers />} />
+              <Route path="/audience-builder" element={<AudienceBuilder />} />
+              <Route path="/campaign-studio" element={<CampaignStudio />} />
+              <Route path="/analytics" element={<Analytics />} />
+            </Routes>
+          </main>
+        </div>
+
+      </div>
+    </Router>
+  );
 }
-
-export default App
