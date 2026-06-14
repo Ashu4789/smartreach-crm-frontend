@@ -1,48 +1,53 @@
 @import "tailwindcss";
 
 @theme {
+  --color-brand-primary: #0f172a;
   --color-brand-emerald: #059669;
   --color-brand-emerald-dark: #047857;
-  --color-brand-emerald-light: #d1fae5;
+  --color-brand-emerald-light: #ecfdf5;
   --color-brand-blue: #2563eb;
   --color-brand-blue-dark: #1d4ed8;
-  --color-brand-blue-light: #dbeafe;
+  --color-brand-blue-light: #eff6ff;
   --color-brand-red: #dc2626;
-  --color-brand-red-light: #fee2e2;
+  --color-brand-red-light: #fef2f2;
   
-  --font-sans: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-display: 'Manrope', 'Inter', system-ui, -apple-system, sans-serif;
 }
 
 /* Base custom styles and animations */
 @layer base {
   body {
-    @apply bg-slate-900 text-slate-100 min-h-screen antialiased;
+    @apply bg-slate-50/60 text-slate-600 min-h-screen antialiased;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display text-slate-900 font-semibold;
   }
 }
 
-/* Glassmorphism utility card */
+/* Custom layout classes */
 .glass-card {
-  @apply bg-slate-800/60 border border-slate-700/50 backdrop-blur-md rounded-xl shadow-lg;
+  @apply bg-white border border-slate-200/80 rounded-xl shadow-xs;
 }
 
-/* Micro-animations */
 .hover-lift {
-  @apply transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:border-emerald-500/30;
+  @apply transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm hover:border-slate-300;
 }
 
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 ::-webkit-scrollbar-track {
-  background: rgba(15, 23, 42, 0.3);
+  background: rgba(241, 245, 249, 0.5);
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(148, 163, 184, 0.3);
-  border-radius: 4px;
+  background: rgba(148, 163, 184, 0.4);
+  border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(148, 163, 184, 0.5);
+  background: rgba(148, 163, 184, 0.6);
 }

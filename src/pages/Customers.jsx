@@ -1,7 +1,28 @@
 import React, { useState, useEffect } from 'react';
+import {
+  Search,
+  Filter,
+  Upload,
+  Download,
+  FileSpreadsheet,
+  ChevronLeft,
+  ChevronRight,
+  TrendingUp,
+  MapPin,
+  Calendar,
+  X
+} from 'lucide-react';
 import API from '../services/api';
+import Button from '../components/UI/Button';
+import Card from '../components/UI/Card';
+import Badge from '../components/UI/Badge';
+import Input from '../components/UI/Input';
+import Table from '../components/UI/Table';
+import Modal from '../components/UI/Modal';
+import { useToast } from '../context/ToastContext';
 
 export default function Customers() {
+  const { addToast } = useToast();
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -14,7 +35,7 @@ export default function Customers() {
   const [totalPages, setTotalPages] = useState(1);
   const [totalCustomers, setTotalCustomers] = useState(0);
 
-  // Modal State
+  // Ingestion Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [uploadType, setUploadType] = useState('customers'); // 'customers' or 'orders'
   const [selectedFile, setSelectedFile] = useState(null);
@@ -25,7 +46,7 @@ export default function Customers() {
     setLoading(true);
     try {
       const res = await API.get('/customers', {
-        params: { search, city, channel, page, limit: 12 }
+        params: { search, city, channel, page, limit: 10 }
       });
       if (res.data.success) {
         setCustomers(res.data.data);
@@ -45,13 +66,11 @@ export default function Customers() {
     fetchCustomers();
   }, [search, city, channel, page]);
 
-  // Handle file select
   const handleFileChange = (e) => {
     setSelectedFile(e.target.files[0]);
     setUploadResult(null);
   };
 
-  // Handle file upload submit
   const handleUploadSubmit = async (e) => {
     e.preventDefault();
     if (!selectedFile) return;
@@ -64,311 +83,380 @@ export default function Customers() {
 
     try {
       const res = await API.post(`/customers/upload?type=${uploadType}`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
+        headers: { 'Content-Type': 'multipart/form-data' }
       });
+      
       setUploadResult({
         success: true,
         message: res.data.message,
         summary: res.data.summary
       });
       setSelectedFile(null);
-      // Refresh list
+      addToast(`${uploadType === 'customers' ? 'Shopper profiles' : 'Orders'} uploaded successfully!`, 'success');
       fetchCustomers();
     } catch (err) {
+      const errMsg = err.response?.data?.message || 'File upload failed. Ensure the format matches CSV requirements.';
       setUploadResult({
         success: false,
-        message: err.response?.data?.message || 'File upload failed. Ensure the format matches CSV requirements.'
+        message: errMsg
       });
+      addToast(errMsg, 'error');
     } finally {
       setUploading(false);
     }
   };
 
+  // Generate and download client-side CSV template file
+  const downloadCSVTemplate = (type) => {
+    let csvContent = '';
+    let filename = '';
+    
+    if (type === 'customers') {
+      csvContent = 'name,email,phone,city,preferredChannel,tags\nJohn Doe,john.doe@example.com,+919988776655,Mumbai,WhatsApp,vip,regular\nJane Smith,jane.smith@example.com,+918877665544,Delhi,Email,new,coupon-hunter';
+      filename = 'shoppers_template.csv';
+    } else {
+      csvContent = 'email,amount,category,date\njohn.doe@example.com,4999.00,Fashion,2026-06-01\njane.smith@example.com,1250.50,Grocery,2026-06-05';
+      filename = 'orders_template.csv';
+    }
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    addToast(`Downloaded ${filename} template`, 'info');
+  };
+
+  // Define Table Headers
+  const tableHeaders = [
+    {
+      key: 'name',
+      label: 'Shopper Name',
+      render: (row) => (
+        <div className="flex flex-col">
+          <span className="font-semibold text-slate-900">{row.name}</span>
+          <span className="text-[10px] text-slate-400 font-mono mt-0.5">{row._id}</span>
+        </div>
+      )
+    },
+    {
+      key: 'email',
+      label: 'Contact Info',
+      render: (row) => (
+        <div className="flex flex-col text-xs">
+          <span className="text-slate-650 font-medium">{row.email}</span>
+          <span className="text-slate-400 mt-0.5">{row.phone || '-'}</span>
+        </div>
+      )
+    },
+    {
+      key: 'city',
+      label: 'Location',
+      render: (row) => (
+        <div className="flex items-center gap-1.5 text-xs text-slate-600">
+          <MapPin className="h-3 w-3 text-slate-400" />
+          <span>{row.city || 'Unknown'}</span>
+        </div>
+      )
+    },
+    {
+      key: 'preferredChannel',
+      label: 'Channel Preferance',
+      render: (row) => <Badge variant={row.preferredChannel}>{row.preferredChannel}</Badge>
+    },
+    {
+      key: 'totalSpend',
+      label: 'Total Spend',
+      align: 'right',
+      render: (row) => (
+        <span className="font-bold text-slate-900">
+          Rs. {row.totalSpend ? row.totalSpend.toLocaleString('en-IN') : '0'}
+        </span>
+      )
+    },
+    {
+      key: 'lastOrderDate',
+      label: 'Last Purchase Date',
+      render: (row) => (
+        <div className="flex items-center gap-1.5 text-xs text-slate-500">
+          <Calendar className="h-3 w-3 text-slate-400" />
+          <span>{row.lastOrderDate ? new Date(row.lastOrderDate).toLocaleDateString() : 'No orders'}</span>
+        </div>
+      )
+    },
+    {
+      key: 'tags',
+      label: 'Cohorts',
+      render: (row) => (
+        <div className="flex flex-wrap gap-1">
+          {row.tags && row.tags.length > 0 ? (
+            row.tags.map((tag, idx) => (
+              <span key={idx} className="bg-slate-100 text-slate-600 text-[10px] px-1.5 py-0.5 rounded border border-slate-200/50">
+                {tag}
+              </span>
+            ))
+          ) : (
+            <span className="text-slate-300 text-xs">-</span>
+          )}
+        </div>
+      )
+    }
+  ];
+
   return (
     <div className="space-y-8">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-white m-0">Customers</h1>
-          <p className="text-slate-400 mt-1">Manage and sync shopper profiles and order analytics.</p>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 m-0">Shopper Database</h1>
+          <p className="text-xs text-slate-500 mt-1">Ingest, search, filter, and audit customer lifetime spend details.</p>
         </div>
-        <button
+        <Button
           onClick={() => {
             setIsModalOpen(true);
             setUploadResult(null);
           }}
-          className="mt-4 sm:mt-0 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium transition shadow-md hover:shadow-lg shadow-emerald-950/40"
+          variant="primary"
+          className="flex items-center gap-2"
         >
-          Import Data (CSV)
-        </button>
+          <Upload className="h-4 w-4" />
+          <span>Import CSV Data</span>
+        </Button>
       </div>
 
-      {/* Filter Toolbar */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-slate-800/40 p-4 border border-slate-700/30 rounded-xl">
-        {/* Search */}
-        <div>
-          <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Search</label>
-          <input
-            type="text"
-            placeholder="Search by name, email, tag..."
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
-            className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500 text-sm"
-          />
-        </div>
-
-        {/* City Filter */}
-        <div>
-          <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">City</label>
-          <input
-            type="text"
-            placeholder="e.g. Mumbai, Delhi"
-            value={city}
-            onChange={(e) => {
-              setCity(e.target.value);
-              setPage(1);
-            }}
-            className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500 text-sm"
-          />
-        </div>
-
-        {/* Preferred Channel */}
-        <div>
-          <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Preferred Channel</label>
-          <select
-            value={channel}
-            onChange={(e) => {
-              setChannel(e.target.value);
-              setPage(1);
-            }}
-            className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-slate-100 focus:outline-none focus:border-emerald-500 text-sm"
-          >
-            <option value="">All Channels</option>
-            <option value="WhatsApp">WhatsApp</option>
-            <option value="SMS">SMS</option>
-            <option value="Email">Email</option>
-            <option value="RCS">RCS</option>
-          </select>
-        </div>
-      </div>
-
-      {/* Customer List / Table */}
-      {loading ? (
-        <div className="flex items-center justify-center min-h-[40vh]">
-          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-emerald-500"></div>
-        </div>
-      ) : error ? (
-        <div className="glass-card p-6 border-brand-red/30 text-brand-red text-center">
-          <p>Failed to load customer profiles: {error}</p>
-        </div>
-      ) : customers.length === 0 ? (
-        <div className="glass-card p-12 text-center text-slate-500">
-          <p className="text-base font-medium">No shopper profiles matched your queries.</p>
-          <p className="text-xs text-slate-600 mt-2">Try widening filters or import raw customer CSVs.</p>
-        </div>
-      ) : (
-        <div className="space-y-6">
-          <div className="overflow-x-auto rounded-xl border border-slate-700/50 bg-slate-800/20 backdrop-blur-md">
-            <table className="min-w-full divide-y divide-slate-700/50">
-              <thead className="bg-slate-800/60">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-300 uppercase tracking-wider">Name</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-300 uppercase tracking-wider">Contact</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-300 uppercase tracking-wider">Location</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-300 uppercase tracking-wider">Preferred Channel</th>
-                  <th className="px-6 py-3 text-right text-xs font-semibold text-slate-300 uppercase tracking-wider">Spend (Rupees)</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-300 uppercase tracking-wider">Last Purchase</th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-300 uppercase tracking-wider">Tags</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800">
-                {customers.map((cust) => (
-                  <tr key={cust._id} className="hover:bg-slate-800/30 transition-colors">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-slate-100">{cust.name}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-400">
-                      <p>{cust.email}</p>
-                      <p className="text-xs text-slate-500 mt-0.5">{cust.phone || '-'}</p>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-300">{cust.city || '-'}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <span className={`inline-block text-xs px-2.5 py-0.5 rounded-full font-medium ${
-                        cust.preferredChannel === 'WhatsApp' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
-                        cust.preferredChannel === 'SMS' ? 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20' :
-                        cust.preferredChannel === 'Email' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' :
-                        'bg-purple-500/10 text-purple-400 border border-purple-500/20'
-                      }`}>
-                        {cust.preferredChannel}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-medium text-slate-100">
-                      Rs. {cust.totalSpend ? cust.totalSpend.toLocaleString('en-IN') : '0'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-400">
-                      {cust.lastOrderDate ? new Date(cust.lastOrderDate).toLocaleDateString() : 'No Purchases'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <div className="flex flex-wrap gap-1">
-                        {cust.tags && cust.tags.length > 0 ? (
-                          cust.tags.map((tag, idx) => (
-                            <span key={idx} className="bg-slate-700 text-slate-300 text-[10px] px-1.5 py-0.5 rounded-md">
-                              {tag}
-                            </span>
-                          ))
-                        ) : (
-                          <span className="text-slate-600 text-xs">-</span>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      {/* Filter Toolbar Card */}
+      <Card bodyClassName="p-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {/* Search bar */}
+          <div className="relative">
+            <Search className="absolute left-3 top-2.5 h-4.5 w-4.5 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search by name, email, tags..."
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
+              className="w-full bg-white border border-slate-200 rounded-lg pl-10 pr-4 py-2 text-slate-800 placeholder-slate-400 focus:outline-none focus:border-emerald-600 text-xs font-semibold"
+            />
           </div>
 
-          {/* Pagination */}
-          <div className="flex items-center justify-between">
-            <p className="text-xs text-slate-400">
-              Showing <span className="font-semibold text-slate-300">{(page - 1) * 12 + 1}</span> to{' '}
-              <span className="font-semibold text-slate-300">{Math.min(page * 12, totalCustomers)}</span> of{' '}
-              <span className="font-semibold text-slate-300">{totalCustomers}</span> customers
-            </p>
-            <div className="flex space-x-2">
+          {/* City Filter */}
+          <div className="relative">
+            <Filter className="absolute left-3 top-2.5 h-4.5 w-4.5 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Filter by city (e.g. Mumbai)"
+              value={city}
+              onChange={(e) => {
+                setCity(e.target.value);
+                setPage(1);
+              }}
+              className="w-full bg-white border border-slate-200 rounded-lg pl-10 pr-4 py-2 text-slate-800 placeholder-slate-400 focus:outline-none focus:border-emerald-600 text-xs font-semibold"
+            />
+          </div>
+
+          {/* Preferred Channel */}
+          <div>
+            <select
+              value={channel}
+              onChange={(e) => {
+                setChannel(e.target.value);
+                setPage(1);
+              }}
+              className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-slate-650 focus:outline-none focus:border-emerald-600 text-xs font-semibold cursor-pointer"
+            >
+              <option value="">All Channels</option>
+              <option value="WhatsApp">WhatsApp</option>
+              <option value="SMS">SMS</option>
+              <option value="Email">Email</option>
+              <option value="RCS">RCS</option>
+            </select>
+          </div>
+        </div>
+      </Card>
+
+      {/* Main Table view */}
+      {error ? (
+        <Card title="Query Error" className="border-red-200 text-center">
+          <p className="text-sm text-red-650">{error}</p>
+        </Card>
+      ) : (
+        <div className="space-y-4">
+          <Table
+            headers={tableHeaders}
+            data={customers}
+            loading={loading}
+            emptyMessage="No shopper records matched your parameters."
+            emptySubtitle="Adjust filters or upload a fresh customers list."
+          />
+
+          {/* Pagination Controls */}
+          {!loading && customers.length > 0 && (
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pt-2">
+              <p className="text-xs text-slate-450">
+                Displaying <span className="font-semibold text-slate-800">{(page - 1) * 10 + 1}</span> to{' '}
+                <span className="font-semibold text-slate-800">{Math.min(page * 10, totalCustomers)}</span> of{' '}
+                <span className="font-semibold text-slate-800">{totalCustomers}</span> total shoppers
+              </p>
+              
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={page === 1}
+                  onClick={() => setPage(p => Math.max(p - 1, 1))}
+                  className="flex items-center gap-1"
+                >
+                  <ChevronLeft className="h-3.5 w-3.5" />
+                  <span>Prev</span>
+                </Button>
+                <span className="text-xs font-bold text-slate-600 px-2">
+                  Page {page} of {totalPages || 1}
+                </span>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={page === totalPages}
+                  onClick={() => setPage(p => Math.min(p + 1, totalPages))}
+                  className="flex items-center gap-1"
+                >
+                  <span>Next</span>
+                  <ChevronRight className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Ingestion Dialog modal */}
+      <Modal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title="Sync Customer Database"
+        subtitle="Import CSV logs to upload shopper profiles or relational order histories"
+        maxWidth="max-w-md"
+      >
+        <form onSubmit={handleUploadSubmit} className="space-y-5">
+          {/* Ingestion Profile Type selection */}
+          <div>
+            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">CSV Data Type</label>
+            <div className="grid grid-cols-2 gap-3">
               <button
-                disabled={page === 1}
-                onClick={() => setPage(p => Math.max(p - 1, 1))}
-                className="px-3 py-1.5 border border-slate-700 rounded bg-slate-800 text-sm text-slate-300 disabled:opacity-30 disabled:pointer-events-none hover:bg-slate-755 transition"
+                type="button"
+                onClick={() => {
+                  setUploadType('customers');
+                  setSelectedFile(null);
+                  setUploadResult(null);
+                }}
+                className={`flex flex-col items-center justify-center p-3 rounded-lg border text-xs font-semibold transition cursor-pointer ${
+                  uploadType === 'customers'
+                    ? 'bg-emerald-50 border-emerald-500 text-emerald-700'
+                    : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-500'
+                }`}
               >
-                Previous
+                <UsersIcon className="h-4 w-4 mb-1" />
+                <span>Shopper Profiles</span>
               </button>
               <button
-                disabled={page === totalPages}
-                onClick={() => setPage(p => Math.min(p + 1, totalPages))}
-                className="px-3 py-1.5 border border-slate-700 rounded bg-slate-800 text-sm text-slate-300 disabled:opacity-30 disabled:pointer-events-none hover:bg-slate-755 transition"
+                type="button"
+                onClick={() => {
+                  setUploadType('orders');
+                  setSelectedFile(null);
+                  setUploadResult(null);
+                }}
+                className={`flex flex-col items-center justify-center p-3 rounded-lg border text-xs font-semibold transition cursor-pointer ${
+                  uploadType === 'orders'
+                    ? 'bg-emerald-50 border-emerald-500 text-emerald-700'
+                    : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-500'
+                }`}
               >
-                Next
+                <FileSpreadsheet className="h-4 w-4 mb-1" />
+                <span>Order Records</span>
               </button>
             </div>
           </div>
-        </div>
-      )}
 
-      {/* CSV Import Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-800 border border-slate-750 max-w-md w-full rounded-xl shadow-2xl p-6 relative">
-            <h3 className="text-lg font-bold text-white mb-2">Import Data via CSV</h3>
-            <p className="text-xs text-slate-400 mb-6">Select a file to sync customer profiles or append order logs.</p>
-            
-            <form onSubmit={handleUploadSubmit} className="space-y-5">
-              {/* Upload Type Radio Selection */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Ingestion Type</label>
-                <div className="grid grid-cols-2 gap-3">
-                  <label className={`flex items-center justify-center p-3 rounded-lg border text-sm font-semibold cursor-pointer transition ${
-                    uploadType === 'customers' 
-                      ? 'bg-emerald-500/10 border-emerald-500 text-emerald-400' 
-                      : 'border-slate-700 bg-slate-850 hover:bg-slate-800 text-slate-300'
-                  }`}>
-                    <input
-                      type="radio"
-                      name="uploadType"
-                      value="customers"
-                      checked={uploadType === 'customers'}
-                      onChange={() => setUploadType('customers')}
-                      className="sr-only"
-                    />
-                    Shopper Profiles
-                  </label>
-                  <label className={`flex items-center justify-center p-3 rounded-lg border text-sm font-semibold cursor-pointer transition ${
-                    uploadType === 'orders' 
-                      ? 'bg-emerald-500/10 border-emerald-500 text-emerald-400' 
-                      : 'border-slate-700 bg-slate-850 hover:bg-slate-800 text-slate-300'
-                  }`}>
-                    <input
-                      type="radio"
-                      name="uploadType"
-                      value="orders"
-                      checked={uploadType === 'orders'}
-                      onChange={() => setUploadType('orders')}
-                      className="sr-only"
-                    />
-                    Order Records
-                  </label>
-                </div>
-              </div>
+          {/* Download Template Buttons */}
+          <div className="p-3 bg-slate-50 rounded-lg border border-slate-100 flex items-center justify-between text-xs">
+            <div className="space-y-0.5">
+              <p className="font-bold text-slate-800">Need a format guide?</p>
+              <p className="text-[10px] text-slate-450">Get our clean mock template:</p>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => downloadCSVTemplate(uploadType)}
+              className="flex items-center gap-1.5"
+            >
+              <Download className="h-3 w-3" />
+              <span>Download Template</span>
+            </Button>
+          </div>
 
-              {/* File Select */}
-              <div className="border border-dashed border-slate-700 rounded-lg p-4 text-center hover:border-slate-500 transition cursor-pointer relative bg-slate-900/40">
-                <input
-                  type="file"
-                  accept=".csv"
-                  onChange={handleFileChange}
-                  className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
-                  required
-                />
-                <div className="space-y-1">
-                  <p className="text-sm font-semibold text-slate-200">
-                    {selectedFile ? selectedFile.name : 'Click or Drag CSV here'}
-                  </p>
-                  <p className="text-[10px] text-slate-500">
-                    {selectedFile ? `${(selectedFile.size / 1024).toFixed(1)} KB` : 'CSV files up to 5MB'}
-                  </p>
-                </div>
-              </div>
+          {/* Drag & Drop File Area */}
+          <div className="border border-dashed border-slate-200 hover:border-emerald-500 hover:bg-emerald-50/10 rounded-lg p-6 text-center transition cursor-pointer relative bg-white">
+            <input
+              type="file"
+              accept=".csv"
+              onChange={handleFileChange}
+              className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+              required
+            />
+            <div className="space-y-1">
+              <Upload className="mx-auto h-6 w-6 text-slate-400" />
+              <p className="text-xs font-semibold text-slate-700">
+                {selectedFile ? selectedFile.name : 'Select or drag CSV file'}
+              </p>
+              <p className="text-[10px] text-slate-400">
+                {selectedFile ? `${(selectedFile.size / 1024).toFixed(1)} KB` : 'CSV spreadsheet up to 5MB'}
+              </p>
+            </div>
+          </div>
 
-              {/* Action Buttons */}
-              <div className="flex justify-end space-x-2 pt-2 border-t border-slate-700/50">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 text-slate-400 text-sm hover:text-slate-250 transition"
-                  disabled={uploading}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={uploading || !selectedFile}
-                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-sm font-semibold disabled:opacity-40 disabled:pointer-events-none transition"
-                >
-                  {uploading ? 'Processing File...' : 'Upload & Sync'}
-                </button>
-              </div>
-            </form>
+          {/* Action buttons */}
+          <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+            <Button variant="ghost" size="sm" onClick={() => setIsModalOpen(false)} disabled={uploading}>
+              Cancel
+            </Button>
+            <Button type="submit" size="sm" variant="secondary" disabled={uploading || !selectedFile} loading={uploading}>
+              Import File
+            </Button>
+          </div>
+        </form>
 
-            {/* Results feedback log inside modal */}
-            {uploadResult && (
-              <div className="mt-6 p-4 rounded-lg text-xs leading-relaxed bg-slate-900 border border-slate-700 overflow-y-auto max-h-[160px]">
-                {uploadResult.success ? (
-                  <div className="text-emerald-400 space-y-1">
-                    <p className="font-bold">{uploadResult.message}</p>
-                    <p>Total Parsed: {uploadResult.summary.totalParsed}</p>
-                    <p>Successful: {uploadResult.summary.successCount}</p>
-                    <p>Failed (Skipped): {uploadResult.summary.failedCount}</p>
-                    {uploadResult.summary.errors.length > 0 && (
-                      <div className="text-red-400 mt-2">
-                        <p className="font-semibold underline">First few parsing warnings:</p>
-                        {uploadResult.summary.errors.map((err, i) => (
-                          <p key={i}>&bull; Reason: {err.reason}</p>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="text-red-400 font-semibold">
-                    <p>{uploadResult.message}</p>
+        {/* Action Results Log inside modal */}
+        {uploadResult && (
+          <div className="mt-4 p-4 rounded-lg text-xs leading-relaxed bg-slate-900 text-slate-300 font-mono overflow-y-auto max-h-[140px] border border-slate-800">
+            {uploadResult.success ? (
+              <div className="text-emerald-450 space-y-1">
+                <p className="font-bold">{uploadResult.message}</p>
+                <p>Total Parsed: {uploadResult.summary.totalParsed}</p>
+                <p>Successful: {uploadResult.summary.successCount}</p>
+                <p>Failed / Skipped: {uploadResult.summary.failedCount}</p>
+                {uploadResult.summary.errors.length > 0 && (
+                  <div className="text-red-400 mt-2">
+                    <p className="font-semibold underline">Skipped details:</p>
+                    {uploadResult.summary.errors.map((err, i) => (
+                      <p key={i}>&bull; {err.reason}</p>
+                    ))}
                   </div>
                 )}
               </div>
+            ) : (
+              <div className="text-red-400 font-semibold">
+                <p>{uploadResult.message}</p>
+              </div>
             )}
           </div>
-        </div>
-      )}
+        )}
+      </Modal>
     </div>
   );
 }
