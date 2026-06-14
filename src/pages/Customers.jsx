@@ -10,7 +10,8 @@ import {
   TrendingUp,
   MapPin,
   Calendar,
-  X
+  X,
+  Users as UsersIcon
 } from 'lucide-react';
 import API from '../services/api';
 import Button from '../components/UI/Button';
